@@ -36,6 +36,8 @@ export async function handleSampleDrag(event: DragEvent, sampleAsset: SampleAsse
 
     try {
         loading.setCursor(true)
+        // Mark this specific sample as being prepared for drag
+        loading.draggedSamples.add(sampleAsset.uuid)
         const path = await saveSample(sampleAsset)
 
         // Save pack image to samples directory and use it as drag icon
@@ -54,6 +56,8 @@ export async function handleSampleDrag(event: DragEvent, sampleAsset: SampleAsse
     } catch (e) {
         console.error("⚠️ Error dragging", e)
     } finally {
+        // Clear the drag loading state and reset cursor
+        loading.draggedSamples.delete(sampleAsset.uuid)
         loading.setCursor(false)
     }
 }

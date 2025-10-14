@@ -53,10 +53,11 @@
         className
     )}
     id={`sample-list-entry-${sampleAsset.uuid}`}
-    draggable="true"
+    draggable={!loading.draggedSamples.has(sampleAsset.uuid)}
     tabindex="-1"
     onmousedown={() => globalAudio.selectSampleAsset(sampleAsset, false)}
     ondragstart={(event) => handleSampleDrag(event, sampleAsset)}
+    class:cursor-wait={loading.draggedSamples.has(sampleAsset.uuid)}
 >
     <PackPreview {pack} />
     <Button
