@@ -9,6 +9,7 @@
     import Ghost from "lucide-svelte/icons/ghost"
     import Shuffle from "lucide-svelte/icons/shuffle"
     import Button from "$lib/components/ui/button/button.svelte"
+    import GenreSelect from "$lib/components/genre-select.svelte"
     import ProgressLoading from "$lib/components/progress-loading.svelte"
     import Separator from "$lib/components/ui/separator/separator.svelte"
     import SortHeader from "$lib/components/sort-header.svelte"
@@ -248,6 +249,7 @@
             <div class="text-muted-foreground text-xs flex-grow">
                 {dataStore.total_records.toLocaleString()} results
             </div>
+            <GenreSelect />
             <Button
                 variant="outline"
                 size="icon"
