@@ -4,9 +4,9 @@
     "version": "../package.json",
     "identifier": "de.kosro.splicerr",
     "build": {
-        "beforeDevCommand": "pnpm dev",
+        "beforeDevCommand": "npm run dev",
         "devUrl": "http://localhost:1337",
-        "beforeBuildCommand": "pnpm build",
+        "beforeBuildCommand": "npm run build",
         "frontendDist": "../build"
     },
     "app": {
