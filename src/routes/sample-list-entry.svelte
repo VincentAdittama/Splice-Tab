@@ -22,6 +22,7 @@
   import { loading } from "$lib/shared/loading.svelte";
   import { assetIcons } from "$lib/shared/icons.svelte";
   import { handleSampleDrag } from "$lib/shared/drag.svelte";
+  import { formatDisplayName } from "$lib/shared/display-name";
 
   let {
     class: className,
@@ -66,7 +67,10 @@
   });
 
   const pack = $derived(sampleAsset.parents.items[0]);
-  const name = $derived(sampleAsset.name.split("/").slice(-1));
+  // Original name for tooltip
+  const originalName = $derived(sampleAsset.name.split("/").slice(-1)[0]);
+  // Formatted name for display
+  const name = $derived(formatDisplayName(originalName));
 
   const millisToMinutesAndSeconds = (millis: number) => {
     var minutes = Math.floor(millis / 60000);
@@ -135,7 +139,7 @@
             {name}
           </Tooltip.Trigger>
           <Tooltip.Content>
-            {name}
+            {originalName}
           </Tooltip.Content>
         </Tooltip.Root>
       </Tooltip.Provider>
