@@ -7,6 +7,8 @@ import {
 import { descrambleSample } from "$lib/splice/descrambler"
 import { fetch } from "@tauri-apps/plugin-http"
 
+import { SvelteMap } from "svelte/reactivity"
+
 // Initialize AudioContext
 export const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
 const gainNode = ctx.createGain()
@@ -19,8 +21,8 @@ ctx.onstatechange = () => {
 
 // LRU Cache for AudioBuffers
 const BUFFER_CACHE_LIMIT = 50
-export const audioBufferCache = new Map<string, AudioBuffer>()
-export const inflightRequests = new Map<string, Promise<AudioBuffer>>()
+export const audioBufferCache = new SvelteMap<string, AudioBuffer>()
+export const inflightRequests = new SvelteMap<string, Promise<AudioBuffer>>()
 
 // Helper to manage LRU
 function cacheAudioBuffer(uuid: string, buffer: AudioBuffer) {

@@ -123,7 +123,14 @@
     >
       <Tooltip.Provider>
         <Tooltip.Root>
-          <Tooltip.Trigger class="overflow-clip text-nowrap cursor-grab">
+          <Tooltip.Trigger
+            class="overflow-clip text-nowrap cursor-grab flex items-center gap-2"
+          >
+            {#if audioBufferCache.has(sampleAsset.uuid)}
+              <div
+                class="h-1.5 w-1.5 rounded-full bg-green-500/50 flex-shrink-0"
+              ></div>
+            {/if}
             {name}
           </Tooltip.Trigger>
           <Tooltip.Content>
