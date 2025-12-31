@@ -22,7 +22,6 @@ export const randomSeed = () =>
 
 export const dataStore = $state({
     sampleAssets: [] as SampleAsset[],
-    descrambledSamples: new Map<string, string>(),
     tags: [] as string[],
     tag_summary: [] as TagSummaryEntry[],
     all_genres: [] as { uuid: string; label: string }[],
@@ -125,14 +124,18 @@ export const fetchAllGenres = async () => {
 
 export const fetchAssets = () => {
     const identityBeforeFetch = JSON.stringify(queryIdentity)
-    if (identityBeforeFetch != currentQueryIdentity) {
+    const isNewSearch = identityBeforeFetch != currentQueryIdentity
+    
+    if (isNewSearch) {
         storeCallbacks.onbeforedataupdate?.()
     }
+    
     loading.assets = true
     querySplice(SamplesSearch, {
         ...queryIdentity,
         page: queryStore.page,
         limit: PER_PAGE,
+        include_tag_summary: isNewSearch,
     })
         .then((response) => {
             const searchResult = (response as SamplesSearchResponse).data
@@ -143,17 +146,6 @@ export const fetchAssets = () => {
                     dataStore.sampleAssets.push(...searchResult.items)
                     console.info("➕ Loaded more assets")
                 } else {
-                    // Free descrambled samples that are not in the new search result / currently selected
-                    for (const sampleAsset of dataStore.sampleAssets) {
-                        if (
-                            !searchResult.items.some(
-                                (other) => sampleAsset.uuid == other.uuid
-                            ) &&
-                            sampleAsset.uuid != globalAudio.currentAsset?.uuid
-                        ) {
-                            freeDescrambledSample(sampleAsset.uuid)
-                        }
-                    }
                     // Prevent duplicates
                     dataStore.sampleAssets = searchResult.items.filter(
                         (asset) =>
@@ -167,8 +159,10 @@ export const fetchAssets = () => {
                 }
                 dataStore.total_records = searchResult.response_metadata.records
 
-                storeCallbacks.onbeforetagsupdate?.()
-                dataStore.tag_summary = searchResult.tag_summary
+                if (searchResult.tag_summary) {
+                    storeCallbacks.onbeforetagsupdate?.()
+                    dataStore.tag_summary = searchResult.tag_summary
+                }
 
                 loading.assets = false
                 loading.beforeFirstLoad = false
@@ -183,49 +177,6 @@ export const fetchAssets = () => {
             loading.fetchError = error
             loading.assets = false
         })
-}
-
-export async function getDescrambledSampleURL(sampleAsset: SampleAsset) {
-    const existingBlobURL = dataStore.descrambledSamples.get(sampleAsset.uuid)
-    if (existingBlobURL) {
-        console.info("✔️ Reusing descrambled sample blob")
-        return existingBlobURL
-    }
-
-    loading.samples.add(sampleAsset.uuid)
-    loading.samplesCount++
-
-    const response = await fetch(sampleAsset.files[0].url)
-
-    const data = new Uint8Array(await response.arrayBuffer())
-
-    const descrambledData = descrambleSample(data)
-
-    const blob = new Blob([descrambledData], {
-        type: "audio/mp3",
-    })
-
-    const blobURL = window.URL.createObjectURL(blob)
-
-    dataStore.descrambledSamples.set(sampleAsset.uuid, blobURL)
-
-    loading.samples.delete(sampleAsset.uuid)
-    loading.samplesCount--
-
-    console.info("🔗 Created descrambled sample blob")
-
-    return blobURL
-}
-
-export function freeDescrambledSample(uuid: string) {
-    const existingBlobURL = dataStore.descrambledSamples.get(uuid)
-    if (!existingBlobURL) return false
-
-    dataStore.descrambledSamples.delete(uuid)
-    window.URL.revokeObjectURL(existingBlobURL)
-    console.info("⛓️‍💥 Freed descrambled sample")
-
-    return true
 }
 
 export function normalizeLabel(label: string) {

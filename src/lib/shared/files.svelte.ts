@@ -1,7 +1,7 @@
 import type { SampleAsset } from "$lib/splice/types"
 import { join, sep } from "@tauri-apps/api/path"
 import { exists, create, mkdir } from "@tauri-apps/plugin-fs"
-import { getDescrambledSampleURL } from "./store.svelte"
+import { getDescrambledSample } from "./audio.svelte"
 import { config, isSamplesDirValid } from "$lib/shared/config.svelte"
 import { encode } from "node-wav"
 import { Buffer } from "buffer"
@@ -50,15 +50,7 @@ export async function saveSample(sampleAsset: SampleAsset) {
         return absolutePath
     }
 
-    const blobURL = await getDescrambledSampleURL(sampleAsset)
-
-    const response = await fetch(blobURL)
-
-    const blob = await response.blob()
-
-    const buffer = await blob.arrayBuffer()
-
-    const samples = await new AudioContext().decodeAudioData(buffer)
+    const samples = await getDescrambledSample(sampleAsset)
     const channels: Float32Array[] = []
 
     for (let i = 0; i < samples.numberOfChannels; i++) {

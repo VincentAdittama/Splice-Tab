@@ -39,20 +39,6 @@
 </script>
 
 <div class={cn("flex flex-col w-full", className)} {...restProps}>
-  <audio
-    bind:this={globalAudio.ref}
-    bind:paused={globalAudio.paused}
-    bind:currentTime={globalAudio.currentTime}
-    bind:duration={globalAudio.duration}
-    bind:volume={globalAudio.volume}
-    onloadstart={() => {
-      globalAudio.loading = true;
-      // TODO: Move into list component
-    }}
-    oncanplaythrough={() => {
-      globalAudio.loading = false;
-    }}
-  ></audio>
   <input
     style="--progress: {globalAudio.progress() * 100 || 0}%"
     type="range"
@@ -60,8 +46,9 @@
     min={0}
     max={globalAudio.duration || 0}
     step="any"
-    bind:value={globalAudio.currentTime}
-    onclick={() => globalAudio.ref.play()}
+    value={globalAudio.currentTime}
+    oninput={(e) =>
+      globalAudio.seek(e.currentTarget.valueAsNumber / globalAudio.duration)}
   />
   <div class="flex items-center justify-between py-2 px-4 gap-4">
     <div class="flex gap-1">
