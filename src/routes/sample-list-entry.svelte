@@ -13,7 +13,8 @@
   import { inview } from "svelte-inview";
   import { dataStore, fetchAssets } from "$lib/shared/store.svelte";
   import {
-    prefetchSample,
+    addToPrefetchQueue,
+    removeFromPrefetchQueue,
     inflightRequests,
     audioBufferCache,
   } from "$lib/shared/audio.svelte";
@@ -37,7 +38,6 @@
   let isInView = $state(false);
 
   $effect(() => {
-    // Dependencies: isInView, loading.samples.size (to retry when slots open)
     if (isInView && !selected && !playing) {
       if (
         audioBufferCache.has(sampleAsset.uuid) ||
@@ -46,13 +46,14 @@
         return;
       }
 
-      // We include loading.samples.size in the closure to make the effect reactive to loading slots
-      const _ = loading.samples.size;
-
       const timer = setTimeout(() => {
-        prefetchSample(sampleAsset);
-      }, 300); // Debounce pre-fetch to avoid requests during fast scroll
-      return () => clearTimeout(timer);
+        addToPrefetchQueue(sampleAsset);
+      }, 300);
+
+      return () => {
+        clearTimeout(timer);
+        removeFromPrefetchQueue(sampleAsset);
+      };
     }
   });
 

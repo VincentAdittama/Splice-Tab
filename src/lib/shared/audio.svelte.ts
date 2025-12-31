@@ -73,6 +73,7 @@ export async function getDescrambledSample(sampleAsset: SampleAsset): Promise<Au
             loading.samples.delete(sampleAsset.uuid)
             loading.samplesCount--
             inflightRequests.delete(sampleAsset.uuid)
+            processPrefetchQueue()
         }
     })()
 
@@ -80,22 +81,35 @@ export async function getDescrambledSample(sampleAsset: SampleAsset): Promise<Au
     return promise
 }
 
+const prefetchQueue = new Set<SampleAsset>()
+
+export function addToPrefetchQueue(sampleAsset: SampleAsset) {
+    if (audioBufferCache.has(sampleAsset.uuid) || inflightRequests.has(sampleAsset.uuid)) return
+    prefetchQueue.add(sampleAsset)
+    processPrefetchQueue()
+}
+
+export function removeFromPrefetchQueue(sampleAsset: SampleAsset) {
+    prefetchQueue.delete(sampleAsset)
+}
+
+export function processPrefetchQueue() {
+    while (loading.samples.size < 10 && prefetchQueue.size > 0) {
+        const next = prefetchQueue.values().next().value
+        if (!next) break
+        prefetchQueue.delete(next)
+        
+        if (audioBufferCache.has(next.uuid) || inflightRequests.has(next.uuid)) continue
+
+        console.info("📡 Queue dispatching pre-fetch:", next.name)
+        getDescrambledSample(next).catch(err => {
+             console.warn("⚠️ Pre-fetch failed for", next.uuid, err)
+        })
+    }
+}
+
 export function prefetchSample(sampleAsset: SampleAsset) {
-    if (
-        audioBufferCache.has(sampleAsset.uuid) ||
-        inflightRequests.has(sampleAsset.uuid)
-    ) {
-        return
-    }
-
-    if (loading.samples.size >= 10) {
-        return
-    }
-
-    console.info("📡 Pre-fetching sample (WebAudio):", sampleAsset.name)
-    getDescrambledSample(sampleAsset).catch((err) => {
-        console.warn("⚠️ Pre-fetch failed for", sampleAsset.uuid, err)
-    })
+   addToPrefetchQueue(sampleAsset)
 }
 
 export function freeAudioBuffer(uuid: string) {
