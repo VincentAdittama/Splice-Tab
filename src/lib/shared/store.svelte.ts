@@ -1,4 +1,4 @@
-import { querySplice, SamplesSearch } from "$lib/splice/api"
+import { CategoryList, querySplice, SamplesSearch } from "$lib/splice/api"
 import { descrambleSample } from "$lib/splice/descrambler"
 import type {
     AssetCategorySlug,
@@ -25,6 +25,7 @@ export const dataStore = $state({
     descrambledSamples: new Map<string, string>(),
     tags: [] as string[],
     tag_summary: [] as TagSummaryEntry[],
+    all_genres: [] as { uuid: string; label: string }[],
     total_records: 0,
 })
 
@@ -80,6 +81,43 @@ export const storeCallbacks = $state({
 })
 
 let currentQueryIdentity: string = ""
+
+export const fetchAllGenres = () => {
+    const categoriesToFetch = ["genres", "styles"]
+    
+    categoriesToFetch.forEach(tagCategory => {
+        querySplice(CategoryList, { tagCategory }).then((response) => {
+            if (!response?.data?.categories) return
+
+            const genres: { uuid: string; label: string }[] = []
+            const categories = response.data.categories.categories
+
+            categories.forEach((cat: any) => {
+                if (cat.tags) {
+                    cat.tags.forEach((tag: any) => {
+                        genres.push({ uuid: tag.uuid, label: tag.label })
+                    })
+                }
+                if (cat.subcategories) {
+                    cat.subcategories.forEach((sub: any) => {
+                        if (sub.tags) {
+                            sub.tags.forEach((tag: any) => {
+                                genres.push({ uuid: tag.uuid, label: tag.label })
+                            })
+                        }
+                    })
+                }
+            })
+
+            // Merge with existing, preventing duplicates
+            dataStore.all_genres = [
+                ...dataStore.all_genres,
+                ...genres.filter(g => !dataStore.all_genres.some(existing => existing.uuid === g.uuid))
+            ]
+            console.info(`🎸 Loaded all ${tagCategory}`)
+        })
+    })
+}
 
 export const fetchAssets = () => {
     const identityBeforeFetch = JSON.stringify(queryIdentity)

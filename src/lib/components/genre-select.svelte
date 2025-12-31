@@ -165,9 +165,17 @@
 
   // Helper to find UUID for a label
   function getGenreUuid(label: string) {
-    return dataStore.tag_summary.find(
+    // Look in tag_summary first
+    const fromSummary = dataStore.tag_summary.find(
       (entry) => entry.tag.label.toLowerCase() === label.toLowerCase()
     )?.tag.uuid;
+
+    if (fromSummary) return fromSummary;
+
+    // Fallback to all_genres if not found in summary
+    return dataStore.all_genres.find(
+      (g) => g.label.toLowerCase() === label.toLowerCase()
+    )?.uuid;
   }
 
   function toggleGenre(label: string) {

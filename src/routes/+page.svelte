@@ -27,6 +27,7 @@
         storeCallbacks,
         queryStore,
         fetchAssets,
+        fetchAllGenres,
         DEFAULT_SORT,
         randomSeed,
     } from "$lib/shared/store.svelte"
@@ -145,6 +146,7 @@
         searchInputRef.focus()
 
         fetchAssets()
+        fetchAllGenres()
     })
 </script>
 
