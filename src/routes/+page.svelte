@@ -195,7 +195,7 @@
               expandTags && "flex-wrap"
             )}
           >
-            {#each dataStore.tag_summary as tag}
+            {#each dataStore.tag_summary.filter((t) => t.tag.taxonomy.name !== "Genre") as tag}
               {@const active = isTagSelected(tag.tag.label)}
               <TagBadge
                 label={tag.tag.label}
