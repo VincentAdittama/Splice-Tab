@@ -82,41 +82,45 @@ export const storeCallbacks = $state({
 
 let currentQueryIdentity: string = ""
 
-export const fetchAllGenres = () => {
+export const fetchAllGenres = async () => {
     const categoriesToFetch = ["genres", "styles"]
     
-    categoriesToFetch.forEach(tagCategory => {
-        querySplice(CategoryList, { tagCategory }).then((response) => {
-            if (!response?.data?.categories) return
+    try {
+        const results = await Promise.all(
+            categoriesToFetch.map(tagCategory => querySplice(CategoryList, { tagCategory }))
+        )
 
-            const genres: { uuid: string; label: string }[] = []
+        const allGenres: { uuid: string; label: string }[] = []
+
+        results.forEach((response, index) => {
+            if (!response?.data?.categories) return
+            const tagCategory = categoriesToFetch[index]
             const categories = response.data.categories.categories
 
             categories.forEach((cat: any) => {
-                if (cat.tags) {
-                    cat.tags.forEach((tag: any) => {
-                        genres.push({ uuid: tag.uuid, label: tag.label })
-                    })
-                }
-                if (cat.subcategories) {
-                    cat.subcategories.forEach((sub: any) => {
-                        if (sub.tags) {
-                            sub.tags.forEach((tag: any) => {
-                                genres.push({ uuid: tag.uuid, label: tag.label })
-                            })
+                const processTags = (tags: any[]) => {
+                    tags.forEach((tag: any) => {
+                        // Avoid duplicates, prioritizing earlier categories (genres > styles)
+                        if (!allGenres.some(g => g.label.toLowerCase() === tag.label.toLowerCase())) {
+                            allGenres.push({ uuid: tag.uuid, label: tag.label })
                         }
                     })
                 }
-            })
 
-            // Merge with existing, preventing duplicates
-            dataStore.all_genres = [
-                ...dataStore.all_genres,
-                ...genres.filter(g => !dataStore.all_genres.some(existing => existing.uuid === g.uuid))
-            ]
+                if (cat.tags) processTags(cat.tags)
+                if (cat.subcategories) {
+                    cat.subcategories.forEach((sub: any) => {
+                        if (sub.tags) processTags(sub.tags)
+                    })
+                }
+            })
             console.info(`🎸 Loaded all ${tagCategory}`)
         })
-    })
+
+        dataStore.all_genres = allGenres
+    } catch (error) {
+        console.error("⚠️ Failed to fetch all genres", error)
+    }
 }
 
 export const fetchAssets = () => {
@@ -222,4 +226,68 @@ export function freeDescrambledSample(uuid: string) {
     console.info("⛓️‍💥 Freed descrambled sample")
 
     return true
+}
+
+export function isTagSelected(label: string) {
+    const lowerLabel = label.toLowerCase()
+
+    // Check all_genres
+    if (
+        dataStore.all_genres.some(
+            (g) =>
+                g.label.toLowerCase() === lowerLabel &&
+                dataStore.tags.includes(g.uuid)
+        )
+    )
+        return true
+
+    // Check tag_summary
+    if (
+        dataStore.tag_summary.some(
+            (entry) =>
+                entry.tag.label.toLowerCase() === lowerLabel &&
+                dataStore.tags.includes(entry.tag.uuid)
+        )
+    )
+        return true
+
+    return false
+}
+
+export function toggleTag(label: string) {
+    const lowerLabel = label.toLowerCase()
+    const uuids = new Set<string>()
+
+    // Collect all known UUIDs for this label
+    dataStore.all_genres.forEach((g) => {
+        if (g.label.toLowerCase() === lowerLabel) uuids.add(g.uuid)
+    })
+    dataStore.tag_summary.forEach((entry) => {
+        if (entry.tag.label.toLowerCase() === lowerLabel)
+            uuids.add(entry.tag.uuid)
+    })
+
+    if (uuids.size === 0) return
+
+    const anySelected = Array.from(uuids).some((uuid) =>
+        dataStore.tags.includes(uuid)
+    )
+
+    if (anySelected) {
+        // Remove all matching tags
+        dataStore.tags = dataStore.tags.filter((tag) => !uuids.has(tag))
+    } else {
+        // Add the "best" UUID (preferring all_genres)
+        const bestUuid =
+            dataStore.all_genres.find(
+                (g) => g.label.toLowerCase() === lowerLabel
+            )?.uuid ||
+            dataStore.tag_summary.find(
+                (entry) => entry.tag.label.toLowerCase() === lowerLabel
+            )?.tag.uuid
+        if (bestUuid) {
+            dataStore.tags.push(bestUuid)
+        }
+    }
+    fetchAssets()
 }

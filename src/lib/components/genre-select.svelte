@@ -3,7 +3,12 @@
   import * as Command from "$lib/components/ui/command/index";
   import { Badge } from "$lib/components/ui/badge/index";
   import { Button } from "$lib/components/ui/button/index";
-  import { dataStore, fetchAssets } from "$lib/shared/store.svelte";
+  import {
+    dataStore,
+    fetchAssets,
+    isTagSelected,
+    toggleTag,
+  } from "$lib/shared/store.svelte";
   import { X, Check } from "lucide-svelte";
 
   // Genre columns/layout - headings (grey, non-clickable) and clickable items (black)
@@ -163,48 +168,47 @@
   let open = $state(false);
   let searchValue = $state("");
 
-  // Helper to find UUID for a label
-  function getGenreUuid(label: string) {
-    // Look in tag_summary first
-    const fromSummary = dataStore.tag_summary.find(
-      (entry) => entry.tag.label.toLowerCase() === label.toLowerCase()
-    )?.tag.uuid;
+  const filteredGenresColumns = $derived.by(() => {
+    const search = searchValue.trim().toLowerCase();
+    if (!search) return genresColumns;
 
-    if (fromSummary) return fromSummary;
+    return genresColumns
+      .map((col) => ({
+        ...col,
+        items: col.items.filter((item) => item.toLowerCase().includes(search)),
+      }))
+      .filter((col) => col.items.length > 0);
+  });
 
-    // Fallback to all_genres if not found in summary
-    return dataStore.all_genres.find(
-      (g) => g.label.toLowerCase() === label.toLowerCase()
-    )?.uuid;
+  function isSelected(label: string) {
+    return isTagSelected(label);
   }
 
   function toggleGenre(label: string) {
-    const uuid = getGenreUuid(label);
-    if (!uuid) return;
-
-    const idx = dataStore.tags.indexOf(uuid);
-    if (idx > -1) {
-      dataStore.tags.splice(idx, 1);
-    } else {
-      dataStore.tags.push(uuid);
-    }
-    fetchAssets();
-  }
-
-  function isSelected(label: string) {
-    const uuid = getGenreUuid(label);
-    return uuid ? dataStore.tags.includes(uuid) : false;
+    toggleTag(label);
   }
 
   function clearAll() {
-    // Only clear tags that are in our genre list
-    const allGenreUuids = genresColumns.flatMap((col) =>
-      col.items.map((item) => getGenreUuid(item)).filter(Boolean)
-    ) as string[];
-
-    dataStore.tags = dataStore.tags.filter(
-      (tag) => !allGenreUuids.includes(tag)
+    // Only clear tags that match labels in our genre columns
+    const allKnownGenreLabels = new Set(
+      genresColumns.flatMap((col) =>
+        col.items.map((item) => item.toLowerCase())
+      )
     );
+
+    // We need to find all UUIDs for these labels
+    const uuidsToRemove = new Set<string>();
+
+    dataStore.all_genres.forEach((g) => {
+      if (allKnownGenreLabels.has(g.label.toLowerCase()))
+        uuidsToRemove.add(g.uuid);
+    });
+    dataStore.tag_summary.forEach((entry) => {
+      if (allKnownGenreLabels.has(entry.tag.label.toLowerCase()))
+        uuidsToRemove.add(entry.tag.uuid);
+    });
+
+    dataStore.tags = dataStore.tags.filter((tag) => !uuidsToRemove.has(tag));
     fetchAssets();
   }
 
@@ -260,11 +264,13 @@
     {/snippet}
   </Popover.Trigger>
   <Popover.Content class="w-[300px] p-0" align="start">
-    <Command.Root>
+    <Command.Root shouldFilter={false}>
       <Command.Input placeholder="Search genres..." bind:value={searchValue} />
       <Command.List class="max-h-[350px] overflow-y-auto">
-        <Command.Empty>No genre found.</Command.Empty>
-        {#each genresColumns as col}
+        {#if filteredGenresColumns.length === 0}
+          <Command.Empty>No genre found.</Command.Empty>
+        {/if}
+        {#each filteredGenresColumns as col}
           <Command.Group heading={col.heading}>
             {#each col.items as item}
               <Command.Item
