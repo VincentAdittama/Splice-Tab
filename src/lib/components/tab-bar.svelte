@@ -8,6 +8,16 @@
   const { class: className } = $props<{ class?: string }>();
 </script>
 
+<svelte:window
+  onkeydown={(e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "w") {
+      e.preventDefault();
+      e.stopPropagation();
+      tabManager.closeTab(tabManager.activeTabId);
+    }
+  }}
+/>
+
 <div
   class={cn("flex items-center gap-2 overflow-x-auto no-scrollbar", className)}
 >
@@ -22,6 +32,13 @@
           : "hover:bg-muted text-muted-foreground border-transparent hover:border-border"
       )}
       onclick={() => tabManager.switchTab(tab.id)}
+      onauxclick={(e) => {
+        if (e.button === 1) {
+          e.preventDefault();
+          e.stopPropagation();
+          tabManager.closeTab(tab.id);
+        }
+      }}
       onkeydown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
