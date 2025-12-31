@@ -228,42 +228,54 @@ export function freeDescrambledSample(uuid: string) {
     return true
 }
 
+export function normalizeLabel(label: string) {
+    let l = label.toLowerCase().trim()
+    
+    // Common Splice Aliases
+    const aliases: Record<string, string> = {
+        "r&b": "rnb",
+        "r and b": "rnb",
+        "drum and bass": "dnb",
+        "drum & bass": "dnb",
+        "lo-fi hip hop": "lofi hip hop",
+        "lo-fi": "lofi",
+    }
+
+    if (aliases[l]) return aliases[l]
+    
+    // Fuzzier matching: remove special chars
+    return l.replace(/[^a-z0-9]/g, "")
+}
+
+const selectedLabels = $derived.by(() => {
+    const normalizedSelected = new Set<string>()
+    const tagSet = new Set(dataStore.tags)
+
+    dataStore.all_genres.forEach((g) => {
+        if (tagSet.has(g.uuid)) normalizedSelected.add(normalizeLabel(g.label))
+    })
+    dataStore.tag_summary.forEach((entry) => {
+        if (tagSet.has(entry.tag.uuid)) normalizedSelected.add(normalizeLabel(entry.tag.label))
+    })
+
+    return normalizedSelected
+})
+
+
 export function isTagSelected(label: string) {
-    const lowerLabel = label.toLowerCase()
-
-    // Check all_genres
-    if (
-        dataStore.all_genres.some(
-            (g) =>
-                g.label.toLowerCase() === lowerLabel &&
-                dataStore.tags.includes(g.uuid)
-        )
-    )
-        return true
-
-    // Check tag_summary
-    if (
-        dataStore.tag_summary.some(
-            (entry) =>
-                entry.tag.label.toLowerCase() === lowerLabel &&
-                dataStore.tags.includes(entry.tag.uuid)
-        )
-    )
-        return true
-
-    return false
+    return selectedLabels.has(normalizeLabel(label))
 }
 
 export function toggleTag(label: string) {
-    const lowerLabel = label.toLowerCase()
+    const targetNormalized = normalizeLabel(label)
     const uuids = new Set<string>()
 
-    // Collect all known UUIDs for this label
+    // Collect all known UUIDs that normalize to this label
     dataStore.all_genres.forEach((g) => {
-        if (g.label.toLowerCase() === lowerLabel) uuids.add(g.uuid)
+        if (normalizeLabel(g.label) === targetNormalized) uuids.add(g.uuid)
     })
     dataStore.tag_summary.forEach((entry) => {
-        if (entry.tag.label.toLowerCase() === lowerLabel)
+        if (normalizeLabel(entry.tag.label) === targetNormalized)
             uuids.add(entry.tag.uuid)
     })
 
@@ -280,10 +292,10 @@ export function toggleTag(label: string) {
         // Add the "best" UUID (preferring all_genres)
         const bestUuid =
             dataStore.all_genres.find(
-                (g) => g.label.toLowerCase() === lowerLabel
+                (g) => normalizeLabel(g.label) === targetNormalized
             )?.uuid ||
             dataStore.tag_summary.find(
-                (entry) => entry.tag.label.toLowerCase() === lowerLabel
+                (entry) => normalizeLabel(entry.tag.label) === targetNormalized
             )?.tag.uuid
         if (bestUuid) {
             dataStore.tags.push(bestUuid)

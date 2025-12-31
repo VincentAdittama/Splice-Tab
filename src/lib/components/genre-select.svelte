@@ -8,6 +8,7 @@
     fetchAssets,
     isTagSelected,
     toggleTag,
+    normalizeLabel,
   } from "$lib/shared/store.svelte";
   import { X, Check } from "lucide-svelte";
 
@@ -192,7 +193,7 @@
     // Only clear tags that match labels in our genre columns
     const allKnownGenreLabels = new Set(
       genresColumns.flatMap((col) =>
-        col.items.map((item) => item.toLowerCase())
+        col.items.map((item) => normalizeLabel(item))
       )
     );
 
@@ -200,11 +201,11 @@
     const uuidsToRemove = new Set<string>();
 
     dataStore.all_genres.forEach((g) => {
-      if (allKnownGenreLabels.has(g.label.toLowerCase()))
+      if (allKnownGenreLabels.has(normalizeLabel(g.label)))
         uuidsToRemove.add(g.uuid);
     });
     dataStore.tag_summary.forEach((entry) => {
-      if (allKnownGenreLabels.has(entry.tag.label.toLowerCase()))
+      if (allKnownGenreLabels.has(normalizeLabel(entry.tag.label)))
         uuidsToRemove.add(entry.tag.uuid);
     });
 
