@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { loading } from "$lib/shared/loading.svelte";
+  import { loading } from "$lib/shared/store.svelte";
   import { uid } from "$lib/shared/uid";
   import { fetch } from "@tauri-apps/plugin-http";
   import pako from "pako";

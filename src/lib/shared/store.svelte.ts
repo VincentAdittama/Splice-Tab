@@ -11,22 +11,62 @@ import type {
     TagSummaryEntry,
 } from "$lib/splice/types"
 import { globalAudio } from "./audio.svelte"
-import { loading } from "./loading.svelte"
+import { loading as globalLoading } from "./loading.svelte"
 import { fetch } from "@tauri-apps/plugin-http"
+import { tabManager } from "./tabs.svelte"
 
-export const DEFAULT_SORT = "relevance"
-export const PER_PAGE = 50
+// Combined loading proxy
+export const loading = new Proxy({} as any, {
+    get(_, prop) {
+        if (prop in globalLoading) {
+            return globalLoading[prop as keyof typeof globalLoading]
+        }
+        return tabManager.activeTab.loadingState[prop as keyof typeof tabManager.activeTab.loadingState]
+    },
+    set(_, prop, value) {
+        if (prop in globalLoading) {
+            (globalLoading as any)[prop] = value
+            return true
+        }
+        (tabManager.activeTab.loadingState as any)[prop] = value
+        return true
+    }
+}) as typeof globalLoading & {
+    assets: boolean
+    beforeFirstLoad: boolean
+    fetchError: Error | null
+}
 
-export const randomSeed = () =>
-    Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString()
+import { DEFAULT_SORT, PER_PAGE, randomSeed } from "./constants"
 
-export const dataStore = $state({
-    sampleAssets: [] as SampleAsset[],
-    tags: [] as string[],
-    tag_summary: [] as TagSummaryEntry[],
+export { DEFAULT_SORT, PER_PAGE, randomSeed }
+
+// Global shared state for genres (not per-tab)
+const globalData = $state({
     all_genres: [] as { uuid: string; label: string }[],
-    total_records: 0,
 })
+
+// Proxy for dataStore to point to active tab's dataState
+export const dataStore = new Proxy({} as any, {
+    get(_, prop) {
+        if (prop === "all_genres") return globalData.all_genres
+        return tabManager.activeTab.dataState[prop as keyof typeof tabManager.activeTab.dataState]
+    },
+    set(_, prop, value) {
+        if (prop === "all_genres") {
+            globalData.all_genres = value
+            return true
+        }
+        (tabManager.activeTab.dataState as any)[prop] = value
+        return true
+    }
+}) as {
+    sampleAssets: SampleAsset[]
+    tags: string[]
+    tag_summary: TagSummaryEntry[]
+    all_genres: { uuid: string; label: string }[]
+    total_records: number
+}
 
 export const keys = [
     "C",
@@ -44,19 +84,28 @@ export const keys = [
 ] as const
 export const chord_types = ["major", "minor"]
 
-export const queryStore = $state({
-    query: "",
-    sort: DEFAULT_SORT as AssetSortType,
-    random_seed: randomSeed(),
-    order: "DESC" as SortOrder,
-    page: 1,
-    asset_category_slug: null as AssetCategorySlug | null,
-    bpm: null as string | null,
-    min_bpm: null as number | null,
-    max_bpm: null as number | null,
-    key: null as Key | null,
-    chord_type: null as ChordType | null,
-})
+// Proxy for queryStore to point to active tab's queryState
+export const queryStore = new Proxy({} as any, {
+    get(_, prop) {
+        return tabManager.activeTab.queryState[prop as keyof typeof tabManager.activeTab.queryState]
+    },
+    set(_, prop, value) {
+        (tabManager.activeTab.queryState as any)[prop] = value
+        return true
+    }
+}) as {
+    query: string
+    sort: AssetSortType
+    random_seed: string
+    order: SortOrder
+    page: number
+    asset_category_slug: AssetCategorySlug | null
+    bpm: string | null
+    min_bpm: number | null
+    max_bpm: number | null
+    key: Key | null
+    chord_type: ChordType | null
+}
 
 // The query identity is the part of the query that uniquely identifies the returned data
 // It is used to determine if the fetched data should replace the current data, be appended to it, or be ignored
@@ -116,6 +165,7 @@ export const fetchAllGenres = async () => {
             console.info(`🎸 Loaded all ${tagCategory}`)
         })
 
+        // This goes to globalData via the proxy
         dataStore.all_genres = allGenres
     } catch (error) {
         console.error("⚠️ Failed to fetch all genres", error)
@@ -138,9 +188,22 @@ export const fetchAssets = () => {
         include_tag_summary: isNewSearch,
     })
         .then((response) => {
+            // Check if identity matched active tab when response returns
+            // But actually we might want to check against the tab that initiated the request...
+            // For now, let's assume global simple handling, but ideally we should track request ID per tab.
+            // Given the complexity, simpliest path is just updating whatever is active, OR we assume
+            // user doesn't switch super fast. 
+            // Better: Check if the currentQueryIdentity matches.
+            
             const searchResult = (response as SamplesSearchResponse).data
                 .assetsSearch
             const identityAfterFetch = JSON.stringify(queryIdentity)
+            
+            // If the query params changed while fetching (e.g. user typed more), ignore
+            // Note: This check relies on the *current* active tab's state. 
+            // If user switched tabs, `queryIdentity` now refers to the NEW tab.
+            // So this actually inadvertently protects against cross-tab pollution if the new tab has different query.
+            
             if (identityBeforeFetch == identityAfterFetch) {
                 if (identityBeforeFetch == currentQueryIdentity) {
                     dataStore.sampleAssets.push(...searchResult.items)

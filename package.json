@@ -25,7 +25,8 @@
     "mode-watcher": "^0.5.1",
     "node-wav": "^0.0.2",
     "pako": "^2.1.0",
-    "svelte-inview": "^4.0.4"
+    "svelte-inview": "^4.0.4",
+    "uid": "^2.0.2"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.6",

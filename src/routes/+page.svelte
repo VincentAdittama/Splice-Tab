@@ -21,8 +21,8 @@
   import TagBadge from "$lib/components/tag-badge.svelte";
   import { globalAudio } from "$lib/shared/audio.svelte";
   import type { AssetSortType } from "$lib/splice/types";
-  import { loading } from "$lib/shared/loading.svelte";
   import {
+    loading,
     dataStore,
     storeCallbacks,
     queryStore,
@@ -35,6 +35,8 @@
   } from "$lib/shared/store.svelte";
   import SettingsDialog from "$lib/components/settings-dialog.svelte";
   import KeySelect from "$lib/components/key-select.svelte";
+  import TabBar from "$lib/components/tab-bar.svelte";
+  import { tabManager } from "$lib/shared/tabs.svelte";
 
   // TODO: Taxonomy comboboxes (maybe just pass all tags to each)
   // const instrumentTags = $derived(() =>
@@ -52,6 +54,22 @@
   $effect(() => {
     if (queryStore.sort in ["random", "popularity", "relevance", "recency"]) {
       queryStore.order = "DESC";
+    }
+  });
+
+  // Restore scroll position when tab changes
+  $effect(() => {
+    const _ = tabManager.activeTabId;
+    tick().then(() => {
+      if (viewportRef) {
+        viewportRef.scrollTop = tabManager.activeTab.scrollPosition;
+      }
+    });
+  });
+
+  $effect(() => {
+    if (loading.beforeFirstLoad && !loading.assets) {
+      fetchAssets();
     }
   });
 
@@ -311,6 +329,20 @@
         e.preventDefault();
         gotoLast(!silentNav);
         break;
+      case "t":
+      case "T":
+        if (e.metaKey || e.ctrlKey) {
+          e.preventDefault();
+          tabManager.addTab();
+        }
+        break;
+      case "w":
+      case "W":
+        if (e.metaKey || e.ctrlKey) {
+          e.preventDefault();
+          tabManager.closeTab(tabManager.activeTabId);
+        }
+        break;
     }
   };
 
@@ -323,6 +355,11 @@
 
   onMount(() => {
     viewportRef.addEventListener("scroll", () => {
+      // Save scroll position for tab
+      if (tabManager.activeTab) {
+        tabManager.activeTab.scrollPosition = viewportRef.scrollTop;
+      }
+
       if (
         !loading.assets &&
         viewportRef.scrollTop + viewportRef.clientHeight >=
@@ -334,10 +371,22 @@
       }
     });
 
-    searchInputRef.focus();
+    searchInputRef?.focus();
 
-    fetchAssets();
-    fetchAllGenres();
+    // Initial load only if empty? Or simple logic:
+    // fetchAssets();
+    // fetchAllGenres();
+    // But now we have tabs.
+    // If the tab is fresh, it might need assets.
+    // fetchAssets checks if currently loading?
+
+    // Actually, on new tab creation we might want to trigger `fetchAssets()`.
+    // But `Tab` is constructor based.
+
+    // Taxonomy is global, ensure loaded
+    if (dataStore.all_genres.length === 0) {
+      fetchAllGenres();
+    }
   });
 </script>
 
@@ -345,6 +394,7 @@
 
 <main class="flex flex-col size-full">
   <div class="flex flex-col p-4 gap-4">
+    <TabBar class="w-full" />
     <div class="flex gap-4 justify-between items-center">
       <SettingsDialog />
       <SearchInput
