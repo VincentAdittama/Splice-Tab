@@ -26,6 +26,8 @@ export class Tab {
         max_bpm: null as number | null,
         key: null as Key | null,
         chord_type: null as ChordType | null,
+        parent_asset_uuid: null as string | null,
+        packName: null as string | null,
     })
 
     // --- Data State ---
@@ -46,6 +48,7 @@ export class Tab {
 
     // Dynamic title derived from state
     title = $derived.by(() => {
+        if (this.queryState.packName) return this.queryState.packName;
         if (this.queryState.query) return this.queryState.query;
         
         if (this.dataState.tags.length > 0) {

@@ -105,6 +105,8 @@ export const queryStore = new Proxy({} as any, {
     max_bpm: number | null
     key: Key | null
     chord_type: ChordType | null
+    parent_asset_uuid: string | null
+    packName: string | null
 }
 
 // The query identity is the part of the query that uniquely identifies the returned data
@@ -121,6 +123,7 @@ const queryIdentity = $derived({
     max_bpm: queryStore.max_bpm,
     key: queryStore.key,
     chord_type: queryStore.chord_type,
+    parent_asset_uuid: queryStore.parent_asset_uuid,
 })
 
 export const storeCallbacks = $state({
@@ -186,6 +189,7 @@ export const fetchAssets = () => {
         page: queryStore.page,
         limit: PER_PAGE,
         include_tag_summary: isNewSearch,
+        parent_asset_uuid: queryStore.parent_asset_uuid,
     })
         .then((response) => {
             // Check if identity matched active tab when response returns
