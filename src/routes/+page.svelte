@@ -233,20 +233,14 @@
         {dataStore.total_records.toLocaleString()} results
       </div>
       <GenreSelect />
-      <Button
-        variant="outline"
-        size="icon"
-        onclick={() => {
+      <SortSelect
+        bind:sort={queryStore.sort}
+        onselect={fetchAssets}
+        onshuffle={() => {
           queryStore.random_seed = randomSeed();
           queryStore.sort = "random";
           fetchAssets();
         }}
-      >
-        <Shuffle />
-      </Button>
-      <SortSelect
-        bind:sort={queryStore.sort}
-        onselect={fetchAssets}
         order={queryStore.order}
       />
     </div>

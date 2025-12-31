@@ -1,102 +1,73 @@
 <script lang="ts">
-    import * as Select from "$lib/components/ui/select/index"
-    import ChevronDown from "lucide-svelte/icons/chevron-down"
-    import { cn } from "$lib/utils"
-    import type { SortOrder } from "$lib/splice/types"
+  import Button from "$lib/components/ui/button/button.svelte";
+  import Star from "lucide-svelte/icons/star";
+  import Flame from "lucide-svelte/icons/flame";
+  import Clock from "lucide-svelte/icons/clock";
+  import Shuffle from "lucide-svelte/icons/shuffle";
+  import { cn } from "$lib/utils";
+  import type { SortOrder } from "$lib/splice/types";
 
-    let {
-        sort = $bindable(),
-        onselect,
-        order,
-    }: {
-        sort: string
-        onselect: () => void
-        order: SortOrder
-    } = $props()
+  let {
+    sort = $bindable(),
+    onselect,
+    onshuffle,
+    order,
+  }: {
+    sort: string;
+    onselect: () => void;
+    onshuffle: () => void;
+    order: SortOrder;
+  } = $props();
 
-    const options = [
-        {
-            value: "random",
-            label: "Random",
-        },
-        {
-            value: "relevance",
-            label: "Most relevant",
-        },
-        {
-            value: "popularity",
-            label: "Most popular",
-        },
-        {
-            value: "recency",
-            label: "Most recent",
-        },
-    ]
+  const softOptions = [
+    {
+      value: "random",
+      label: "Random",
+      icon: Shuffle,
+    },
+    {
+      value: "relevance",
+      label: "Relevant",
+      icon: Star,
+    },
+    {
+      value: "popularity",
+      label: "Popular",
+      icon: Flame,
+    },
+    {
+      value: "recency",
+      label: "Recent",
+      icon: Clock,
+    },
+  ];
 
-    const ordered = [
-        {
-            value: "name",
-            label: "Filename",
-        },
-        {
-            value: "duration",
-            label: "Time",
-        },
-        {
-            value: "key",
-            label: "Key",
-        },
-        {
-            value: "bpm",
-            label: "BPM",
-        },
-    ]
-
-    let triggerLabel = $state("")
-    let showOrder = $state(false)
-
-    $effect(() => {
-        const orderedLabel = ordered.find(
-            (option) => option.value === sort
-        )?.label
-        if (orderedLabel) {
-            triggerLabel = orderedLabel
-            showOrder = true
-        } else {
-            triggerLabel =
-                options.find((option) => option.value === sort)?.label ??
-                "Sort by..."
-            showOrder = false
-        }
-    })
+  const selectSort = (value: string) => {
+    if (value === "random") {
+      onshuffle();
+    } else {
+      sort = value;
+      onselect();
+    }
+  };
 </script>
 
-<Select.Root type="single" bind:value={sort} onValueChange={() => onselect()}>
-    <Select.Trigger class="w-[180px]">
-        <div class="flex items-center">
-            {triggerLabel}
-            {#if showOrder}
-                <ChevronDown
-                    size="18"
-                    class={cn(
-                        "transition-transform ease-in-out",
-                        order == "ASC" ? "rotate-[-180deg]" : ""
-                    )}
-                />
-            {/if}
-        </div>
-    </Select.Trigger>
-    <Select.Content>
-        <Select.Group>
-            <Select.GroupHeading
-                class="text-xs text-muted-foreground font-normal"
-                >Sort by</Select.GroupHeading
-            >
-            {#each options as option}
-                <Select.Item value={option.value} label={option.label}
-                    >{option.label}</Select.Item
-                >
-            {/each}
-        </Select.Group>
-    </Select.Content>
-</Select.Root>
+<div class="flex items-center bg-muted/50 p-1 rounded-lg border border-border">
+  {#each softOptions as option}
+    {@const active = sort === option.value}
+    <Button
+      variant={active ? "secondary" : "ghost"}
+      size="sm"
+      onclick={() => selectSort(option.value)}
+      class={cn(
+        "h-7 px-3 gap-1.5 transition-all text-xs font-medium",
+        active
+          ? "bg-background shadow-sm text-foreground"
+          : "text-muted-foreground hover:text-foreground"
+      )}
+    >
+      <option.icon size="14" />
+      {option.label}
+    </Button>
+  {/each}
+</div>

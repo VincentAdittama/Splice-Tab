@@ -1,55 +1,55 @@
 <script lang="ts">
-    import * as Select from "$lib/components/ui/select/index"
+  import Button from "$lib/components/ui/button/button.svelte";
+  import Layers from "lucide-svelte/icons/layers";
+  import Repeat from "lucide-svelte/icons/repeat";
+  import Zap from "lucide-svelte/icons/zap";
+  import { cn } from "$lib/utils";
 
-    let {
-        asset_category_slug = $bindable(),
-        onselect,
-    }: { asset_category_slug: string | null; onselect: () => void } = $props()
+  let {
+    asset_category_slug = $bindable(),
+    onselect,
+  }: { asset_category_slug: string | null; onselect: () => void } = $props();
 
-    const options = [
-        {
-            value: "null",
-            label: "One-Shots & Loops",
-        },
-        {
-            value: "loop",
-            label: "Loops",
-        },
-        {
-            value: "oneshot",
-            label: "One-Shots",
-        },
-    ]
+  const options = [
+    {
+      value: null,
+      label: "All",
+      icon: Layers,
+    },
+    {
+      value: "loop",
+      label: "Loops",
+      icon: Repeat,
+    },
+    {
+      value: "oneshot",
+      label: "One-Shots",
+      icon: Zap,
+    },
+  ];
 
-    const triggerContent = $derived(
-        options.find((option) => option.value === value)?.label ?? "Category..."
-    )
-
-    const value = $derived(
-        asset_category_slug == null ? "null" : asset_category_slug
-    )
+  const selectCategory = (value: string | null) => {
+    asset_category_slug = value;
+    onselect();
+  };
 </script>
 
-<Select.Root
-    type="single"
-    {value}
-    onValueChange={(v) => {
-        asset_category_slug = v == "null" ? null : v
-        onselect()
-    }}
->
-    <Select.Trigger class="w-[180px]">{triggerContent}</Select.Trigger>
-    <Select.Content>
-        <Select.Group>
-            <Select.GroupHeading
-                class="text-xs text-muted-foreground font-normal"
-                >Category</Select.GroupHeading
-            >
-            {#each options as option}
-                <Select.Item value={option.value} label={option.label}
-                    >{option.label}</Select.Item
-                >
-            {/each}
-        </Select.Group>
-    </Select.Content>
-</Select.Root>
+<div class="flex items-center bg-muted/50 p-1 rounded-lg border border-border">
+  {#each options as option}
+    {@const active = asset_category_slug === option.value}
+    <Button
+      variant={active ? "secondary" : "ghost"}
+      size="sm"
+      onclick={() => selectCategory(option.value)}
+      class={cn(
+        "h-7 px-3 gap-1.5 transition-all text-xs font-medium",
+        active
+          ? "bg-background shadow-sm text-foreground"
+          : "text-muted-foreground hover:text-foreground"
+      )}
+    >
+      <option.icon size="14" />
+      {option.label}
+    </Button>
+  {/each}
+</div>
