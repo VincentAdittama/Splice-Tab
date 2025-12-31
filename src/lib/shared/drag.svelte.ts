@@ -4,7 +4,42 @@ import { exists, create, mkdir, writeFile } from "@tauri-apps/plugin-fs"
 import { invoke } from "@tauri-apps/api/core"
 import { saveSample } from "./files.svelte"
 import { loading } from "./loading.svelte"
+import { globalAudio } from "./audio.svelte"
 import type { SampleAsset, PackAsset } from "$lib/splice/types"
+
+// Cache for in-flight or completed preparations
+const preparationCache = new Map<string, Promise<{ path: string, iconPath: string }>>()
+
+async function getIconPath(sampleAsset: SampleAsset): Promise<string> {
+    const pack = sampleAsset.parents.items[0] as PackAsset
+    if (pack.files[0]?.url) {
+        return await invoke("process_drag_icon", { imageUrl: pack.files[0].url, packId: pack.uuid });
+    } else {
+        return await createInvisibleIcon()
+    }
+}
+
+export function prepareSample(sampleAsset: SampleAsset) {
+    if (preparationCache.has(sampleAsset.uuid)) {
+        return preparationCache.get(sampleAsset.uuid)!
+    }
+
+    const promise = (async () => {
+        try {
+            const [path, iconPath] = await Promise.all([
+                saveSample(sampleAsset),
+                getIconPath(sampleAsset)
+            ])
+            return { path, iconPath }
+        } catch (e) {
+            preparationCache.delete(sampleAsset.uuid) // invalidating cache on error
+            throw e
+        }
+    })()
+
+    preparationCache.set(sampleAsset.uuid, promise)
+    return promise
+}
 
 async function createInvisibleIcon(): Promise<string> {
     const cacheDir = await appCacheDir()
@@ -38,21 +73,18 @@ export async function handleSampleDrag(event: DragEvent, sampleAsset: SampleAsse
         loading.setCursor(true)
         // Mark this specific sample as being prepared for drag
         loading.draggedSamples.add(sampleAsset.uuid)
-        const path = await saveSample(sampleAsset)
 
-        // Save pack image to samples directory and use it as drag icon
-        const pack = sampleAsset.parents.items[0] as PackAsset
-        let iconPath: string
+        // Use prepareSample to get the promise (either cached or new)
+        const { path, iconPath } = await prepareSample(sampleAsset)
         
-        // Use the Rust command to process and save the drag icon
-        // We pass the original image URL, and Rust will handle fetching, resizing, and caching.
-        if (pack.files[0]?.url) {
-            iconPath = await invoke("process_drag_icon", { imageUrl: pack.files[0].url, packId: pack.uuid });
-        } else {
-            iconPath = await createInvisibleIcon()
-        }
+        console.log("🐉 Start Drag:", { path, iconPath })
 
-        startDrag({ item: [path], icon: iconPath })
+        // Await startDrag - it returns a promise that resolves when the drag operation completes
+        await startDrag({ item: [path], icon: iconPath })
+        
+        // Only pause audio after a successful drag operation (drop completed)
+        console.log("🛑 Drag completed, stopping audio")
+        globalAudio.pause()
     } catch (e) {
         console.error("⚠️ Error dragging", e)
     } finally {

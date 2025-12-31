@@ -1,7 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use image::{ImageReader, ImageFormat};
+use image::{DynamicImage, ImageFormat, ImageReader};
 use std::io::Cursor;
 use tauri::Manager;
 use tokio::fs;
@@ -12,8 +12,11 @@ async fn process_drag_icon(
     pack_id: String,
     app_handle: tauri::AppHandle,
 ) -> Result<String, String> {
-    let cache_dir = app_handle.path().cache_dir().map_err(|e| format!("Failed to get cache directory: {}", e))?;
-    let icon_path = cache_dir.join(format!("{}.png", pack_id));
+    let cache_dir = app_handle
+        .path()
+        .cache_dir()
+        .map_err(|e| format!("Failed to get cache directory: {}", e))?;
+    let icon_path = cache_dir.join(format!("{}_offset_tl.png", pack_id));
 
     if icon_path.exists() {
         return Ok(icon_path.to_string_lossy().into_owned());
@@ -34,8 +37,18 @@ async fn process_drag_icon(
 
     let resized_img = img.resize_exact(64, 64, image::imageops::FilterType::Lanczos3);
 
+    // Create a larger canvas (150x150) to offset the icon
+    // Assuming the OS/Plugin centers the drag image under the cursor:
+    // Canvas Center: (75, 75) - this is where the cursor will be.
+    // Image at (0, 0) ends at (64, 64).
+    // Result: Image is fully to the top-left of the cursor with about 11px clearance.
+    let mut canvas = DynamicImage::new_rgba8(150, 150);
+
+    image::imageops::overlay(&mut canvas, &resized_img, 0, 0);
+
     let mut buffer = Vec::new();
-    resized_img.write_to(&mut Cursor::new(&mut buffer), ImageFormat::Png)
+    canvas
+        .write_to(&mut Cursor::new(&mut buffer), ImageFormat::Png)
         .map_err(|e| format!("Failed to encode image to PNG: {}", e))?;
 
     fs::write(&icon_path, buffer)

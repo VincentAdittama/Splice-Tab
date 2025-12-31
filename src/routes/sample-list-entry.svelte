@@ -21,7 +21,7 @@
   import { cn, formatKey } from "$lib/utils";
   import { loading } from "$lib/shared/loading.svelte";
   import { assetIcons } from "$lib/shared/icons.svelte";
-  import { handleSampleDrag } from "$lib/shared/drag.svelte";
+  import { handleSampleDrag, prepareSample } from "$lib/shared/drag.svelte";
   import { formatDisplayName } from "$lib/shared/display-name";
 
   let {
@@ -92,7 +92,10 @@
     rootMargin: "400px", // Start pre-fetching earlier
   }}
   oninview_change={(event) => (isInView = event.detail.inView)}
-  onmousedown={() => globalAudio.selectSampleAsset(sampleAsset, false)}
+  onmousedown={() => {
+    globalAudio.selectSampleAsset(sampleAsset, false);
+    prepareSample(sampleAsset);
+  }}
   ondragstart={(event) => handleSampleDrag(event, sampleAsset)}
   class:cursor-wait={loading.draggedSamples.has(sampleAsset.uuid)}
 >
@@ -105,7 +108,7 @@
     onclick={() =>
       playing ? globalAudio.pause() : globalAudio.playSampleAsset(sampleAsset)}
   >
-    {#if (selected && globalAudio.loading) || (loading.samplesCount && loading.samples.has(sampleAsset.uuid))}
+    {#if (selected && globalAudio.loading) || (loading.samplesCount && loading.samples.has(sampleAsset.uuid)) || loading.draggedSamples.has(sampleAsset.uuid)}
       <LoaderCircle class="animate-spin" />
     {:else if playing}
       <Pause />
