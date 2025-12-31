@@ -90,36 +90,227 @@
     fetchAssets();
   };
 
-  const gotoPrev = () => {
+  const gotoPrev = (autoPlay: boolean = true) => {
+    if (dataStore.sampleAssets.length === 0) return;
+
     const currentIndex = dataStore.sampleAssets.findIndex(
       (asset) => asset.uuid === globalAudio.currentAsset?.uuid
     );
-    if (currentIndex > -1) {
-      const sampleAsset = dataStore.sampleAssets[currentIndex - 1];
+
+    // If no sample selected or at first sample, select first sample
+    const targetIndex = currentIndex <= 0 ? 0 : currentIndex - 1;
+    const sampleAsset = dataStore.sampleAssets[targetIndex];
+
+    // Optimistically select to allow rapid navigation
+    globalAudio.selectSampleAsset(sampleAsset);
+
+    if (autoPlay) {
       globalAudio.playSampleAsset(sampleAsset);
-      const entryEl = document.getElementById(
-        `sample-list-entry-${sampleAsset.uuid}`
-      );
-      if (entryEl)
-        entryEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    } else {
+      globalAudio.selectSampleAsset(sampleAsset);
     }
+    const entryEl = document.getElementById(
+      `sample-list-entry-${sampleAsset.uuid}`
+    );
+    if (entryEl)
+      entryEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
 
-  const gotoNext = () => {
+  // Wrappers for AudioPlayer (always auto-play on button click)
+  const onPrevClick = () => gotoPrev(true);
+  const onNextClick = () => gotoNext(true);
+
+  const gotoNext = (autoPlay: boolean = true) => {
+    if (dataStore.sampleAssets.length === 0) return;
+
     const currentIndex = dataStore.sampleAssets.findIndex(
       (asset) => asset.uuid === globalAudio.currentAsset?.uuid
     );
-    if (
-      currentIndex !== -1 &&
-      currentIndex + 1 < dataStore.sampleAssets.length
-    ) {
-      const sampleAsset = dataStore.sampleAssets[currentIndex + 1];
+
+    // If no sample selected, select first; otherwise select next (or stay at last)
+    let targetIndex: number;
+    if (currentIndex === -1) {
+      targetIndex = 0;
+    } else if (currentIndex + 1 < dataStore.sampleAssets.length) {
+      targetIndex = currentIndex + 1;
+    } else {
+      return; // Already at last sample
+    }
+
+    const sampleAsset = dataStore.sampleAssets[targetIndex];
+
+    // Optimistically select to allow rapid navigation
+    globalAudio.selectSampleAsset(sampleAsset);
+
+    if (autoPlay) {
       globalAudio.playSampleAsset(sampleAsset);
-      const entryEl = document.getElementById(
-        `sample-list-entry-${sampleAsset.uuid}`
-      );
-      if (entryEl)
-        entryEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+    const entryEl = document.getElementById(
+      `sample-list-entry-${sampleAsset.uuid}`
+    );
+    if (entryEl)
+      entryEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  };
+
+  const gotoFirst = (autoPlay: boolean = true) => {
+    if (dataStore.sampleAssets.length === 0) return;
+    const sampleAsset = dataStore.sampleAssets[0];
+
+    globalAudio.selectSampleAsset(sampleAsset);
+
+    if (autoPlay) {
+      globalAudio.playSampleAsset(sampleAsset);
+    } else {
+      globalAudio.selectSampleAsset(sampleAsset);
+    }
+    const entryEl = document.getElementById(
+      `sample-list-entry-${sampleAsset.uuid}`
+    );
+    if (entryEl)
+      entryEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  };
+
+  const gotoLast = (autoPlay: boolean = true) => {
+    if (dataStore.sampleAssets.length === 0) return;
+    const sampleAsset =
+      dataStore.sampleAssets[dataStore.sampleAssets.length - 1];
+
+    globalAudio.selectSampleAsset(sampleAsset);
+
+    if (autoPlay) {
+      globalAudio.playSampleAsset(sampleAsset);
+    } else {
+      globalAudio.selectSampleAsset(sampleAsset);
+    }
+    const entryEl = document.getElementById(
+      `sample-list-entry-${sampleAsset.uuid}`
+    );
+    if (entryEl)
+      entryEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  };
+
+  const playRandom = () => {
+    if (dataStore.sampleAssets.length === 0) return;
+    const randomIndex = Math.floor(
+      Math.random() * dataStore.sampleAssets.length
+    );
+    const sampleAsset = dataStore.sampleAssets[randomIndex];
+    globalAudio.playSampleAsset(sampleAsset);
+    const entryEl = document.getElementById(
+      `sample-list-entry-${sampleAsset.uuid}`
+    );
+    if (entryEl)
+      entryEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  };
+
+  const isInputFocused = () => {
+    const activeEl = document.activeElement;
+    return (
+      activeEl instanceof HTMLInputElement ||
+      activeEl instanceof HTMLTextAreaElement ||
+      (activeEl instanceof HTMLElement && activeEl.isContentEditable)
+    );
+  };
+
+  const handleGlobalKeydown = (e: KeyboardEvent) => {
+    const inputFocused = isInputFocused();
+
+    // Define which keys should ALWAYS work (even when typing in search)
+    const navigationKeys = ["ArrowUp", "ArrowDown", "Escape"];
+    const isNavigationKey = navigationKeys.includes(e.key);
+
+    // If input is focused and it's NOT a navigation key, skip
+    if (inputFocused && !isNavigationKey) {
+      return;
+    }
+
+    // If input is focused and it IS a navigation key, blur first for arrow keys
+    if (inputFocused && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+      (document.activeElement as HTMLElement)?.blur();
+    }
+
+    const silentNav = e.shiftKey;
+
+    switch (e.key) {
+      case "ArrowUp":
+        e.preventDefault();
+        gotoPrev(!silentNav);
+        break;
+      case "ArrowDown":
+        e.preventDefault();
+        gotoNext(!silentNav);
+        break;
+      case "ArrowLeft":
+        e.preventDefault();
+        globalAudio.seekRelative(-5);
+        break;
+      case "ArrowRight":
+        e.preventDefault();
+        globalAudio.seekRelative(5);
+        break;
+      case " ":
+        e.preventDefault();
+        if (e.shiftKey) {
+          playRandom();
+        } else {
+          globalAudio.togglePlay();
+        }
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (globalAudio.currentAsset) {
+          globalAudio.playSampleAsset(globalAudio.currentAsset, 0);
+        } else if (dataStore.sampleAssets.length > 0) {
+          gotoFirst(true);
+        }
+        break;
+      case "Escape":
+        e.preventDefault();
+        if (inputFocused) {
+          (document.activeElement as HTMLElement)?.blur();
+        } else {
+          globalAudio.stop();
+        }
+        break;
+      case "r":
+      case "R":
+        if (!e.metaKey && !e.ctrlKey) {
+          e.preventDefault();
+          globalAudio.restart();
+        }
+        break;
+      case "m":
+      case "M":
+        e.preventDefault();
+        globalAudio.toggleMute();
+        break;
+      case "/":
+        e.preventDefault();
+        searchInputRef.focus();
+        break;
+      case "k":
+      case "K":
+        if (e.metaKey || e.ctrlKey) {
+          e.preventDefault();
+          searchInputRef.focus();
+        }
+        break;
+      case "[":
+        e.preventDefault();
+        globalAudio.volumeDown();
+        break;
+      case "]":
+        e.preventDefault();
+        globalAudio.volumeUp();
+        break;
+      case "Home":
+        e.preventDefault();
+        gotoFirst(!silentNav);
+        break;
+      case "End":
+        e.preventDefault();
+        gotoLast(!silentNav);
+        break;
     }
   };
 
@@ -149,6 +340,8 @@
     fetchAllGenres();
   });
 </script>
+
+<svelte:window onkeydown={handleGlobalKeydown} />
 
 <main class="flex flex-col size-full">
   <div class="flex flex-col p-4 gap-4">
@@ -290,30 +483,6 @@
   <ScrollArea
     class="px-4 flex-grow before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-4 before:bg-gradient-to-t before:from-transparent before:to-background before:pointer-events-none after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-4 after:bg-gradient-to-b after:from-transparent after:to-background after:pointer-events-none"
     bind:viewportRef
-    onkeydown={(e) => {
-      switch (e.key) {
-        case "ArrowUp":
-          e.preventDefault();
-          gotoPrev();
-          break;
-        case "ArrowDown":
-          e.preventDefault();
-          gotoNext();
-          break;
-        case "ArrowLeft":
-          e.preventDefault();
-          gotoPrev();
-          break;
-        case "ArrowRight":
-          e.preventDefault();
-          gotoNext();
-          break;
-        case " ":
-          e.preventDefault();
-          globalAudio.togglePlay();
-          break;
-      }
-    }}
   >
     <div class="flex flex-col py-2 size-full">
       {#each dataStore.sampleAssets as sampleAsset, index}
@@ -362,5 +531,5 @@
       {/if}
     </div>
   </ScrollArea>
-  <AudioPlayer onprev={gotoPrev} onnext={gotoNext} />
+  <AudioPlayer onprev={onPrevClick} onnext={onNextClick} />
 </main>

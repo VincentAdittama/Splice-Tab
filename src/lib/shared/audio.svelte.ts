@@ -279,6 +279,32 @@ export const globalAudio = $state({
         }
     },
 
+    seekRelative(deltaSec: number) {
+        if (!this.currentAsset) return
+        const newTime = Math.max(0, Math.min(this.duration, this.currentTime + deltaSec))
+        if (!this.paused) {
+            this.resumeAt(newTime)
+        } else {
+            pauseTime = newTime
+            this.currentTime = newTime
+        }
+    },
+
+    restart() {
+        if (!this.currentAsset) return
+        this.resumeAt(0)
+    },
+
+    volumeUp(step: number = 0.1) {
+        this.volume = Math.min(1, this.volume + step)
+        gainNode.gain.value = this.volume
+    },
+
+    volumeDown(step: number = 0.1) {
+        this.volume = Math.max(0, this.volume - step)
+        gainNode.gain.value = this.volume
+    },
+
     async resumeAt(time: number) {
          if (!this.currentAsset) return
          if (sourceNode) {
