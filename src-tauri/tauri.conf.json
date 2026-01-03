@@ -1,18 +1,18 @@
 {
     "$schema": "https://schema.tauri.app/config/2",
-    "productName": "Splicerr",
+    "productName": "Splice-Tab",
     "version": "../package.json",
-    "identifier": "de.kosro.splicerr",
+    "identifier": "de.kosro.splice-tab",
     "build": {
-        "beforeDevCommand": "npm run dev",
+        "beforeDevCommand": "pnpm run dev",
         "devUrl": "http://localhost:1337",
-        "beforeBuildCommand": "npm run build",
+        "beforeBuildCommand": "pnpm run build",
         "frontendDist": "../build"
     },
     "app": {
         "windows": [
             {
-                "title": "Splicerr",
+                "title": "Splice-Tab",
                 "width": 800,
                 "height": 600
             }

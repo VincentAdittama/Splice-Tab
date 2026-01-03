@@ -40,7 +40,7 @@
             <div class="flex flex-col gap-2">
                 <Label for="fileInput">Samples Directory</Label>
                 <p class="text-muted-foreground text-sm">
-                    This is where Splicerr will place the Packs & Samples you
+                    This is where Splice-Tab will place the Packs & Samples you
                     download.
                 </p>
                 <div class="flex gap-2">

@@ -1,6 +1,6 @@
-# <img src="./src-tauri/icons/128x128.png" width="64"/> Splicerr
+# <img src="./src-tauri/icons/128x128.png" width="64"/> Splice-Tab
 
-**Splicerr** is an alternative frontend for the popular [Splice](https://splice.com/features/sounds) sample library. It does not require any authentication and contains all of the most important features of the regular desktop app (including drag-and-drop).
+**Splice-Tab** is an alternative frontend for the popular [Splice](https://splice.com/features/sounds) sample library. It does not require any authentication and contains all of the most important features of the regular desktop app (including drag-and-drop).
 
 It's basically a full rewrite of [ascpixi's](https://github.com/ascpixi) [Splicedd ❤️](https://github.com/ascpixi/splicedd), just with a couple more features and built with [Svelte](https://svelte.dev/) and [Tauri 2.0](https://v2.tauri.app/).
 
@@ -8,7 +8,7 @@ Please show your appreciation by starring ⭐ the [original project](https://git
 
 <p align="center">
   <br>
-  <a href="https://github.com/robert-k/splicerr/releases/"><b>Click here to download the latest release!</b></a>
+  <a href="https://github.com/robert-k/splice-tab/releases/"><b>Click here to download the latest release!</b></a>
 </p>
 
 ## Demo
@@ -30,7 +30,7 @@ https://github.com/user-attachments/assets/34f1ba90-c881-4a04-a5df-c147bdb51c2c
 ## 🔧 How to develop
 
 1. Install the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) & [pnpm](https://pnpm.io/installation)
-2. Clone the project: `git clone https://github.com/robert-k/splicerr`
+2. Clone the project: `git clone https://github.com/robert-k/splice-tab`
 3. Install dependencies: `pnpm i`
 4. Start the development server: `pnpm tauri dev`
 

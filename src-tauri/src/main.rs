@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    splicerr_lib::run()
+    splice_tab_lib::run()
 }
