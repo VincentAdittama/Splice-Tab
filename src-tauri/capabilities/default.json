@@ -16,6 +16,9 @@
                     "url": "https://*.splice.com/**"
                 },
                 {
+                    "url": "https://surfaces-graphql.splice.com"
+                },
+                {
                     "url": "https://*.amazonaws.com/spliceblob.splice.com/**"
                 }
             ]
